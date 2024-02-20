@@ -136,12 +136,12 @@ https://github.com/hiyouga/LLaMA-Factory/assets/16256802/6ba60acc-e2e2-4bec-b846
 | PPO 训练               | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | DPO 训练               | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
-> [!NOTE]
+> [!NOTE] （LoRA是一种高效微调方法：非全参微调）（PPO：奖励模型指导大模型训练，DPO：PPO变种，一种改进）
 > 请使用 `--quantization_bit 4` 参数来启用 QLoRA 训练。
 
 ## 数据集
 
-<details><summary>预训练数据集</summary>
+<details><summary>预训练数据集（整段落的文章）</summary>
 
 - [Wiki Demo (en)](data/wiki_demo.txt)
 - [RefinedWeb (en)](https://huggingface.co/datasets/tiiuae/falcon-refinedweb)
@@ -155,7 +155,7 @@ https://github.com/hiyouga/LLaMA-Factory/assets/16256802/6ba60acc-e2e2-4bec-b846
 
 </details>
 
-<details><summary>指令微调数据集</summary>
+<details><summary>指令微调数据集（input：instructions+input，label：output）</summary>
 
 - [Stanford Alpaca (en)](https://github.com/tatsu-lab/stanford_alpaca)
 - [Stanford Alpaca (zh)](https://github.com/ymcui/Chinese-LLaMA-Alpaca)
@@ -204,7 +204,7 @@ https://github.com/hiyouga/LLaMA-Factory/assets/16256802/6ba60acc-e2e2-4bec-b846
 
 </details>
 
-<details><summary>偏好数据集</summary>
+<details><summary>偏好数据集（output有两个回答，1个好的，1个差的）</summary>
 
 - [HH-RLHF (en)](https://huggingface.co/datasets/Anthropic/hh-rlhf)
 - [Open Assistant (multilingual)](https://huggingface.co/datasets/OpenAssistant/oasst1)
@@ -232,7 +232,7 @@ huggingface-cli login
 - gradio 和 matplotlib (用于网页端交互)
 - uvicorn, fastapi 和 sse-starlette (用于 API)
 
-### 硬件依赖
+### 硬件依赖（显存）
 
 | 训练方法 | 精度 |   7B  |  13B  |  30B  |   65B  |   8x7B |
 | ------- | ---- | ----- | ----- | ----- | ------ | ------ |
@@ -243,6 +243,7 @@ huggingface-cli login
 | QLoRA   |   4  |   6GB |  12GB |  24GB |   48GB |   32GB |
 
 ## 如何使用
+
 
 ### 数据准备（可跳过）
 
@@ -261,13 +262,11 @@ cd LLaMA-Factory
 pip install -r requirements.txt
 ```
 
-如果要在 Windows 平台上开启量化 LoRA（QLoRA），需要安装预编译的 `bitsandbytes` 库, 支持 CUDA 11.1 到 12.2。
+如果要在 Windows 平台上开启量化 LoRA（QLoRA），需要安装预编译的 `bitsandbytes` 库, 支持 CUDA 11.1 到 12.1.
 
 ```bash
-pip install https://github.com/jllllll/bitsandbytes-windows-webui/releases/download/wheels/bitsandbytes-0.40.0-py3-none-win_amd64.whl
+pip install https://github.com/jllllll/bitsandbytes-windows-webui/releases/download/wheels/bitsandbytes-0.39.1-py3-none-win_amd64.whl
 ```
-
-如果要在 Windows 平台上开启 FlashAttention-2，需要安装预编译的 `flash-attn` 库，支持 CUDA 12.1 到 12.2，请根据需求到 [flash-attention](https://github.com/bdashore3/flash-attention/releases) 下载对应版本安装。
 
 ### 使用魔搭社区（可跳过）
 
@@ -296,7 +295,7 @@ CUDA_VISIBLE_DEVICES=0 USE_MODELSCOPE_HUB=1 python src/train_web.py
 > [!IMPORTANT]
 > 如果您使用多张 GPU 训练模型，请移步[多 GPU 分布式训练](#多-gpu-分布式训练)部分。
 
-#### 预训练
+#### 预训练（generating_args，dataset等不同）
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python src/train_bash.py \
