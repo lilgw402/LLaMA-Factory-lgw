@@ -1,6 +1,7 @@
 import inspect
 import os
-from typing import TYPE_CHECKING, List, Literal, Union
+from typing_extensions import Literal
+from typing import TYPE_CHECKING, List, Union
 
 from datasets import concatenate_datasets, interleave_datasets, load_dataset, load_from_disk
 
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
+#负责加载单个数据集。它取决于传入的 `dataset_attr`（数据集属性）、`model_args`（模型参数）和 `data_args`（数据参数）。
 def load_single_dataset(
     dataset_attr: "DatasetAttr",
     model_args: "ModelArguments",
@@ -32,6 +33,7 @@ def load_single_dataset(
 ):
     logger.info("Loading dataset {}...".format(dataset_attr))
     data_path, data_name, data_dir, data_files = None, None, None, None
+    #检查数据来源，它可以从 Hugging Face Hub、Modelscope Hub、脚本或本地文件加载。
     if dataset_attr.load_from in ["hf_hub", "ms_hub"]:
         data_path = dataset_attr.dataset_name
         data_name = dataset_attr.subset
@@ -61,10 +63,12 @@ def load_single_dataset(
         if data_path is None:
             raise ValueError("File extension must be txt, csv, json or jsonl.")
 
+        #对文件哈希进行检查来确保数据完整性。
         checksum(data_files, dataset_attr.file_sha1)
     else:
         raise NotImplementedError
 
+    #对于 Modelscope Hub 的情况，有一个特殊的数据加载逻辑，并使用 `MsDataset` 是一个特定库的类。
     if dataset_attr.load_from == "ms_hub":
         try:
             from modelscope import MsDataset
@@ -104,13 +108,14 @@ def load_single_dataset(
     if data_args.streaming and (dataset_attr.load_from == "file"):  # faster than specifying streaming=True
         dataset = dataset.to_iterable_dataset()  # TODO: add num shards parameter
 
+    #最后，可能对数据集进行截断，根据 `max_samples` 参数来限制数据量，并返回对齐后的数据集
     if data_args.max_samples is not None:  # truncate dataset
         num_samples = min(data_args.max_samples, len(dataset))
         dataset = dataset.select(range(num_samples))
 
     return align_dataset(dataset, dataset_attr, data_args)
 
-
+#用于将多个数据集根据一定策略（如连接或交叠）合并成一个数据集。
 def merge_dataset(
     all_datasets: List[Union["Dataset", "IterableDataset"]],
     data_args: "DataArguments",
@@ -134,7 +139,6 @@ def merge_dataset(
     else:
         raise ValueError("Unknown mixing strategy.")
 
-
 def get_dataset(
     tokenizer: "PreTrainedTokenizer",
     model_args: "ModelArguments",
@@ -143,11 +147,12 @@ def get_dataset(
     stage: Literal["pt", "sft", "rm", "ppo"],
     # split: Optional[str] = "train", # TODO: add split
 ) -> Union["Dataset", "IterableDataset"]:
+    #获取模板并调整分词器：为数据集文本采用适当的模板，并确保分词器根据模板需求进行相应的调整。
     template = get_template_and_fix_tokenizer(tokenizer, data_args.template)
     if data_args.train_on_prompt and template.efficient_eos:
         raise ValueError("Current template does not support `train_on_prompt`.")
 
-    # Load from cache
+    # Load from cache  如果定义了缓存路径且缓存存在，将直接从缓存加载数据集
     if data_args.cache_path is not None:
         if os.path.exists(data_args.cache_path):
             logger.warning("Loading dataset from disk will ignore other data arguments.")
@@ -155,13 +160,13 @@ def get_dataset(
             if data_args.streaming:
                 dataset = dataset.to_iterable_dataset()
             return dataset
-
+    #加载和合并数据集，main_process_first确保主进程先执行
     with training_args.main_process_first(desc="load dataset"):
         all_datasets = []
         for dataset_attr in get_dataset_list(data_args):
             all_datasets.append(load_single_dataset(dataset_attr, model_args, data_args))
         dataset = merge_dataset(all_datasets, data_args, training_args)
-
+    #调用预处理函数，调用 `dataset.map` 使用预处理函数，并移除不需要的列。
     with training_args.main_process_first(desc="pre-process dataset"):
         preprocess_func, print_function = get_preprocess_and_print_func(
             tokenizer, template, data_args, training_args, stage
@@ -175,8 +180,9 @@ def get_dataset(
                 desc="Running tokenizer on dataset",
             )
 
-        dataset = dataset.map(preprocess_func, batched=True, remove_columns=column_names, **kwargs)
-
+        dataset = dataset.map(preprocess_func, batched=True, remove_columns=column_names, **kwargs) #处理数据集
+        
+        #如果预处理后的数据集可以被缓存，并且尚未缓存，那么就会缓存到硬盘
         if data_args.cache_path is not None and not os.path.exists(data_args.cache_path):
             if training_args.should_save:
                 dataset.save_to_disk(data_args.cache_path)

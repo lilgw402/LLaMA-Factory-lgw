@@ -301,11 +301,11 @@ CUDA_VISIBLE_DEVICES=0 USE_MODELSCOPE_HUB=1 python src/train_web.py
 CUDA_VISIBLE_DEVICES=0 python src/train_bash.py \
     --stage pt \
     --do_train \
-    --model_name_or_path path_to_llama_model \
+    --model_name_or_path ChatGLM3 \
     --dataset wiki_demo \
     --finetuning_type lora \
     --lora_target q_proj,v_proj \
-    --output_dir path_to_pt_checkpoint \
+    --output_dir ChatGLM3_pt_checkpoint \
     --overwrite_cache \
     --per_device_train_batch_size 4 \
     --gradient_accumulation_steps 4 \

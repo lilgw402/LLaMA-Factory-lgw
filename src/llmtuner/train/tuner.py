@@ -20,8 +20,9 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
+#调用 `get_train_args` 函数来从 `args` 参数中分解出模型参数（`model_args`）、数据参数（`data_args`）、训练参数（`training_args`）、微调参数（`finetuning_args`）和生成参数（`generating_args`）。
 def run_exp(args: Optional[Dict[str, Any]] = None, callbacks: Optional[List["TrainerCallback"]] = None):
+    breakpoint()
     model_args, data_args, training_args, finetuning_args, generating_args = get_train_args(args)
     callbacks = [LogCallback()] if callbacks is None else callbacks
 
