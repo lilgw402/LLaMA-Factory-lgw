@@ -102,27 +102,32 @@ def _make_causal_mask(
         input_ids_shape=input_ids_shape, dtype=dtype, device=device, past_key_values_length=past_key_values_length
     )
 
-
+#实现一种归一化方法，类似于 T5 模型中的 LayerNorm
 class LlamaRMSNorm(nn.Module):
+    #hidden_size`: 要归一化的特征向量的维度。`eps` (epsilon): 一个很小的数值，用于数值稳定性，以避免除以零。默认值是 `1e-6`。
     def __init__(self, hidden_size, eps=1e-6):
         """
         LlamaRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
+        #`self.weight`: 一个形状与 `hidden_size` 相同的张量，初始化为全1。这个参数在训练过程中会被学习，用来对归一化后的特征向量进行缩放。
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
+        #`hidden_states`: 输入特征向量，预计为 `(batch_size, sequence_length, hidden_size)` 的形状。
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(torch.float32)
+        #计算特征向量在最后一个维度（即 `hidden_size`）上的方差。`keepdim=True` 保持输出的维度，这样归一化的结果可以直接使用广播机制与原输入相乘。
         variance = hidden_states.pow(2).mean(-1, keepdim=True)
+        #进行归一化，即用每个特征向量除以它自己的标准差（方差平方根）。为了数值稳定性，方差中加入了一个很小的 `epsilon`。这里使用 `torch.rsqrt` 来计算倒数平方根。
         hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
         return self.weight * hidden_states.to(input_dtype)
 
 
 ALL_LAYERNORM_LAYERS.append(LlamaRMSNorm)
 
-
+#实现旋转位置编码（Rotary Positional Encoding, RoPE）。这种编码表示能够提供序列的位置信息，特别是在自注意力机制中。
 class LlamaRotaryEmbedding(nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
         super().__init__()
@@ -130,6 +135,7 @@ class LlamaRotaryEmbedding(nn.Module):
         self.dim = dim
         self.max_position_embeddings = max_position_embeddings
         self.base = base
+        #位置频率的倒数，按照给出的 `base` 和维度 `dim` 计算得到。这将在编码时提供不同的频率。
         inv_freq = 1.0 / (self.base ** (torch.arange(0, self.dim, 2).float().to(device) / self.dim))
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 

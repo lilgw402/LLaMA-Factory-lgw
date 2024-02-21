@@ -46,10 +46,12 @@ class Evaluator:
             token=self.model_args.hf_hub_token,
         )
 
-        with open(mapping, "r", encoding="utf-8") as f:
+        with open(mapping, "r", encoding="utf-8") as f: #打开 `mapping` 文件并读取内容到 `categorys` 字典中。
             categorys: Dict[str, Dict[str, str]] = json.load(f)
 
-        category_corrects = {subj: np.array([], dtype="bool") for subj in SUBJECTS}
+        #为每个科目初始化一个空的 NumPy 布尔数组，以跟踪每个科目的预测正确性
+        category_corrects = {subj: np.array([], dtype="bool") for subj in SUBJECTS} 
+        #设置一个进度条（`tqdm`），迭代 `categorys` 字典的键（即不同科目），显示科目处理进度
         pbar = tqdm(categorys.keys(), desc="Processing subjects", position=0)
         results = {}
         for subject in pbar:
@@ -57,7 +59,7 @@ class Evaluator:
                 kwargs = {"trust_remote_code": True}
             else:
                 kwargs = {}
-
+            #针对每个科目，加载对应的数据集。
             dataset = load_dataset(
                 path=os.path.join(self.eval_args.task_dir, self.eval_args.task),
                 name=subject,
@@ -68,10 +70,13 @@ class Evaluator:
             )
             pbar.set_postfix_str(categorys[subject]["name"])
             inputs, outputs, labels = [], [], []
+            #进行内部循环，格式化每个批次的支持集和目标数据。
             for i in trange(len(dataset[self.data_args.split]), desc="Formatting batches", position=1, leave=False):
+                #`support_set` 通过从训练集中随机选择 `n_shot` 个样本形成。
                 support_set = (
                     dataset["train"].shuffle().select(range(min(self.eval_args.n_shot, len(dataset["train"]))))
                 )
+                #以 `self.eval_template.format_example` 格式化这些样本，并将输入编码为模型可以接受的格式
                 messages = self.eval_template.format_example(
                     target_data=dataset[self.data_args.split][i],
                     support_set=support_set,
@@ -88,9 +93,11 @@ class Evaluator:
                 batch_input = self.tokenizer.pad(
                     inputs[i : i + self.eval_args.batch_size], return_attention_mask=True, return_tensors="pt"
                 ).to(self.model.device)
+                #调用 `batch_inference` 函数生成预测。
                 preds = self.batch_inference(batch_input)
                 outputs += preds
 
+            #通过比较预测（`outputs`）与真实标签（`labels`）来判断正确性。
             corrects = np.array(outputs) == np.array(labels)
             category_name = categorys[subject]["category"]
             category_corrects[category_name] = np.concatenate([category_corrects[category_name], corrects], axis=0)
@@ -100,6 +107,7 @@ class Evaluator:
         pbar.close()
         self._save_results(category_corrects, results)
 
+    #保存预测结果
     def _save_results(self, category_corrects: Dict[str, np.ndarray], results: Dict[str, Dict[int, str]]) -> None:
         score_info = "\n".join(
             [
