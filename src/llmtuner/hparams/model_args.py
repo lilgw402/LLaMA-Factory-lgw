@@ -8,31 +8,38 @@ class ModelArguments:
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune.
     """
 
+    #指定模型权重的路径
     model_name_or_path: str = field(
         metadata={
             "help": "Path to the model weight or identifier from huggingface.co/models or modelscope.cn/models."
         },
     )
+    #指定适配器权重的路径
     adapter_name_or_path: Optional[str] = field(
         default=None,
-        metadata={"help": "Path to the adapter weight or identifier from huggingface.co/models."},
+        metadata={"help": "Path to the adapter weight or identifier from huggingface.co/models."}, #metadata提供这个字段的帮助信息
     )
+    #用于存储从huggingface.co或modelscope.cn下载的预训练模型的目录路径。
     cache_dir: Optional[str] = field(
         default=None,
         metadata={"help": "Where to store the pre-trained models downloaded from huggingface.co or modelscope.cn."},
     )
+    #是否使用快速分词器（由tokenizers库支持）
     use_fast_tokenizer: Optional[bool] = field(
         default=False,
         metadata={"help": "Whether or not to use one of the fast tokenizer (backed by the tokenizers library)."},
     )
+    #是否调整分词器词汇表和嵌入层的大小
     resize_vocab: Optional[bool] = field(
         default=False,
         metadata={"help": "Whether or not to resize the tokenizer vocab and the embedding layers."},
     )
+    #在分词过程中是否应该分割特殊令牌
     split_special_tokens: Optional[bool] = field(
         default=False,
         metadata={"help": "Whether or not the special tokens should be split during the tokenization process."},
     )
+    #默认为"main"，指定要使用的模型版本（可以是分支名、标签名或提交ID）
     model_revision: Optional[str] = field(
         default="main",
         metadata={"help": "The specific model version to use (can be a branch name, tag name or commit id)."},
@@ -49,22 +56,27 @@ class ModelArguments:
         default=True,
         metadata={"help": "Whether or not to use double quantization in int4 training."},
     )
+    #可以是"linear"或"dynamic"，指定RoPE嵌入的缩放策略。
     rope_scaling: Optional[Literal["linear", "dynamic"]] = field(
         default=None,
         metadata={"help": "Which scaling strategy should be adopted for the RoPE embeddings."},
     )
+    #是否启用FlashAttention-2以加快训练速度。
     flash_attn: Optional[bool] = field(
         default=False,
         metadata={"help": "Enable FlashAttention-2 for faster training."},
     )
+    #是否启用LongLoRA提出的S^2-Attn（移位短距离注意力）。
     shift_attn: Optional[bool] = field(
         default=False,
         metadata={"help": "Enable shift short attention (S^2-Attn) proposed by LongLoRA."},
     )
+    #是否使用unsloth的优化方法进行LoRA训练。
     use_unsloth: Optional[bool] = field(
         default=False,
         metadata={"help": "Whether or not to use unsloth's optimization for the LoRA training."},
     )
+    #是否禁用梯度检查点
     disable_gradient_checkpointing: Optional[bool] = field(
         default=False,
         metadata={"help": "Whether or not to disable gradient checkpointing."},
@@ -89,6 +101,7 @@ class ModelArguments:
         default=None,
         metadata={"help": "Path to the directory to save the exported model."},
     )
+    #默认为1，指定导出模型文件的分片大小（单位为GB）
     export_size: Optional[int] = field(
         default=1,
         metadata={"help": "The file shard size (in GB) of the exported model."},
