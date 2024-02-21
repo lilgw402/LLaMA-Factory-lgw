@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from ...hparams import DataArguments, FinetuningArguments, GeneratingArguments, ModelArguments
 
-
+#用于进行序列到序列（Seq2Seq）模型的训练、评估和生成预测。
 def run_sft(
     model_args: "ModelArguments",
     data_args: "DataArguments",
@@ -32,18 +32,19 @@ def run_sft(
     dataset = get_dataset(tokenizer, model_args, data_args, training_args, stage="sft")
 
     if training_args.predict_with_generate:
-        tokenizer.padding_side = "left"  # use left-padding in generation
+        tokenizer.padding_side = "left"  #将分词器的填充设置调整为左填充，这通常在生成任务中使用
 
+    #如果模型被量化（`model.is_quantized`）并且不是训练阶段（`not training_args.do_train`），设置一个标识以确保模型与预测代码兼容。
     if getattr(model, "is_quantized", False) and not training_args.do_train:
         setattr(model, "_hf_peft_config_loaded", True)  # hack here: make model compatible with prediction
 
-    data_collator = DataCollatorForSeq2Seq(
+    data_collator = DataCollatorForSeq2Seq( #data_collator用于准备用于训练或评估的数据批次
         tokenizer=tokenizer,
         pad_to_multiple_of=8 if tokenizer.padding_side == "right" else None,  # for shift short attention
         label_pad_token_id=IGNORE_INDEX if data_args.ignore_pad_token_for_loss else tokenizer.pad_token_id,
     )
 
-    # Override the decoding parameters of Seq2SeqTrainer
+    # 更新训练参数：将 `training_args` 转换为字典形式，并更新用于生成预测的参数，然后重新初始化 `Seq2SeqTrainingArguments` 实例
     training_args_dict = training_args.to_dict()
     training_args_dict.update(
         dict(
@@ -65,6 +66,7 @@ def run_sft(
     )
 
     # Keyword arguments for `model.generate`
+    #从 `generating_args` 中创建字典形式的参数，用于 `model.generate` 方法，这些参数控制文本生成过程。
     gen_kwargs = generating_args.to_dict()
     gen_kwargs["eos_token_id"] = [tokenizer.eos_token_id] + tokenizer.additional_special_tokens_ids
     gen_kwargs["pad_token_id"] = tokenizer.pad_token_id
@@ -88,7 +90,7 @@ def run_sft(
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
 
-    # Predict
+    # Predict 使用生成模式的参数gen_kwargs进行预测，并记录和保存预测结果。
     if training_args.do_predict:
         predict_results = trainer.predict(dataset, metric_key_prefix="predict", **gen_kwargs)
         if training_args.predict_with_generate:  # predict_loss will be wrong if predict_with_generate is enabled

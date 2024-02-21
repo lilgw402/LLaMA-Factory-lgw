@@ -19,12 +19,17 @@ logger = get_logger(__name__)
 
 
 def preprocess_pretrain_dataset(
+    #data_args`: 包含预处理数据时需要的参数的对象，例如截断长度等
     examples: Dict[str, List[Any]], tokenizer: "PreTrainedTokenizer", data_args: "DataArguments"
 ) -> Dict[str, List[List[int]]]:
     # build grouped texts with format `X1 X2 X3 ...`
+    #构建组合文本 (`text_examples`):首先，从 `examples` 字典中的 `"prompt"` 键提取出消息列表。接着，遍历消息列表，取每一条消息的 `"content"` 字段，并在其后附加一个结束符号（`eos_token`），用于指示文本的结尾。
+    #结果是一个所有消息文本连接起来，并且每个文本后都加上了结束符号的新列表。
     text_examples = [messages[0]["content"] + tokenizer.eos_token for messages in examples["prompt"]]
+    #上一步得到的文本列表进行分词处理，即将文本转换为模型能够处理的标记（tokens）序列
     tokenized_examples = tokenizer(text_examples, add_special_tokens=False)
     concatenated_examples = {k: list(chain(*tokenized_examples[k])) for k in tokenized_examples.keys()}
+    #获取连接序列的总长度。确定每个数据块的大小，即 `block_size`，这来自 `data_args.cutoff_len`。
     total_length = len(concatenated_examples[list(concatenated_examples.keys())[0]])
     block_size = data_args.cutoff_len
     # we drop the small remainder, and if the total_length < block_size, we exclude this batch

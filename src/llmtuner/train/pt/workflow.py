@@ -24,7 +24,6 @@ def run_pt(
     finetuning_args: "FinetuningArguments",
     callbacks: Optional[List["TrainerCallback"]] = None,
 ):
-    breakpoint()
     model, tokenizer = load_model_and_tokenizer(model_args, finetuning_args, training_args.do_train)
     dataset = get_dataset(tokenizer, model_args, data_args, training_args, stage="pt")
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
@@ -40,6 +39,7 @@ def run_pt(
     )
 
     # Training
+    breakpoint()
     #启动模型的训练过程、保存训练后的模型、记录和保存训练的指标，并在训练结束后进行可视化处理。
     if training_args.do_train:
         #resume_from_checkpoint` 参数通常用于指定一个检查点（checkpoint），从中恢复训练，这在训练过程被中断需要重启时非常有用。
@@ -51,6 +51,7 @@ def run_pt(
         if trainer.is_world_process_zero() and finetuning_args.plot_loss: #检查当前进程是否是多进程环境中的主进程（通常在使用分布式训练时使用）
             plot_loss(training_args.output_dir, keys=["loss", "eval_loss"]) #绘制损失曲线图
 
+    breakpoint()
     # Evaluation
     if training_args.do_eval:
         metrics = trainer.evaluate(metric_key_prefix="eval") #收集评估指标
