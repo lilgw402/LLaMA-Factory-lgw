@@ -24,6 +24,11 @@ pyenv global 3.8.10
 
 
 
+pip install -r requirements.txt
+
+
+
+
 pretraining:
 CUDA_VISIBLE_DEVICES=0 python src/train_bash.py     --stage pt     --do_train     --model_name_or_path ChatGLM3     --dataset wiki_demo     --finetuning_type lora     --lora_target query_key_value     --output_dir ChatGLM3_pt_checkpoint     --overwrite_cache     --per_device_train_batch_size 4     --gradient_accumulation_steps 4     --lr_scheduler_type cosine     --logging_steps 10     --save_steps 1000     --learning_rate 5e-5     --num_train_epochs 3.0     --plot_loss     --fp16
 
@@ -51,7 +56,7 @@ CUDA_VISIBLE_DEVICES=0 python src/train_bash.py \
 
 
 奖励模型：
-CUDA_VISIBLE_DEVICES=0 python src/train_bash.py \
+CUDA_VISIBLE_DEVICES=1 python src/train_bash.py \
     --stage rm \
     --do_train \
     --model_name_or_path ChatGLM3 \
@@ -62,7 +67,7 @@ CUDA_VISIBLE_DEVICES=0 python src/train_bash.py \
     --finetuning_type lora \
     --lora_target query_key_value \
     --output_dir ChatGLM3_rm_checkpoint \
-    --per_device_train_batch_size 2 \
+    --per_device_train_batch_size 1 \
     --gradient_accumulation_steps 4 \
     --lr_scheduler_type cosine \
     --logging_steps 10 \
@@ -72,6 +77,41 @@ CUDA_VISIBLE_DEVICES=0 python src/train_bash.py \
     --plot_loss \
     --fp16
 
+ppo:
+CUDA_VISIBLE_DEVICES=0 python src/train_bash.py \
+    --stage ppo \
+    --do_train \
+    --model_name_or_path ChatGLM3 \
+    --adapter_name_or_path ChatGLM3_sft_checkpoint \
+    --create_new_adapter \
+    --dataset alpaca_gpt4_zh \
+    --template default \
+    --finetuning_type lora \
+    --lora_target query_key_value \
+    --reward_model ChatGLM3_rm_checkpoint \
+    --output_dir path_to_ppo_checkpoint \
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 4 \
+    --lr_scheduler_type cosine \
+    --top_k 0 \
+    --top_p 0.9 \
+    --logging_steps 10 \
+    --save_steps 1000 \
+    --learning_rate 1e-5 \
+    --num_train_epochs 1.0 \
+    --plot_loss \
+    --fp16
+
+
+
+python src/export_model.py \
+    --model_name_or_path ChatGLM3 \
+    --adapter_name_or_path ChatGLM3_sft_checkpoint \
+    --template default \
+    --finetuning_type lora \
+    --export_dir ChatGLM3_export \
+    --export_size 2 \
+    --export_legacy_format False
 
 
 
@@ -89,6 +129,29 @@ python src/cli_demo.py \
     --template default \
     --finetuning_type lora
 
+
+
+
+
+合并 LoRA 权重并导出模型
+python src/export_model.py \
+    --model_name_or_path ChatGLM3 \
+    --adapter_name_or_path path_to_checkpoint \
+    --template default \
+    --finetuning_type lora \
+    --export_dir ChatGLM3_pt_export \
+    --export_size 2 \
+    --export_legacy_format False
+
+
+
+
+
+
+
+
+
+
 httpx.InvalidURL: Invalid port:
 httpx包的bug…
 
@@ -102,14 +165,6 @@ def urlparse(url: str = "", **kwargs: typing.Optional[str]) -> ParseResult:
     # Hard limit the maximum allowable URL length.
     if len(url) > MAX_URL_LENGTH:
         raise InvalidURL("URL too long")
-1
-2
-3
-4
-5
-6
-7
-8
 加了一行
 
 url = url.replace("::", ":").replace("[","").replace("]","")

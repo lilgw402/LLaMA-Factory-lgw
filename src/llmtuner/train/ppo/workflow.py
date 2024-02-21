@@ -36,16 +36,16 @@ def run_ppo(
     )
     dataset = get_dataset(tokenizer, model_args, data_args, training_args, stage="ppo")
 
-    tokenizer.padding_side = "left"  # use left-padding in generation while using right-padding in training
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+    tokenizer.padding_side = "left"  # 以在生成时使用左填充，这与训练中使用的右填充相对应
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)# 处理数据填充，确保在批量处理时，所有序列长度保持一致。
 
     # Create reference model and reward model
-    ref_model = create_ref_model(model_args, finetuning_args, add_valuehead=True)
-    reward_model = create_reward_model(model, model_args, finetuning_args)
+    ref_model = create_ref_model(model_args, finetuning_args, add_valuehead=True) #参考模型：指的是一个在训练期间用作比较基准的模型。
+    reward_model = create_reward_model(model, model_args, finetuning_args) #奖励模型
 
     # Create ppo config
     backward_batch_size = training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps
-    ppo_config = PPOConfig(
+    ppo_config = PPOConfig( # 建立了一个 `PPOConfig` 结构体，包含各种PPO算法需要的配置
         model_name=model_args.model_name_or_path,
         learning_rate=training_args.learning_rate,
         mini_batch_size=training_args.per_device_train_batch_size,
@@ -79,7 +79,7 @@ def run_ppo(
     )
 
     # Initialize our Trainer
-    ppo_trainer = CustomPPOTrainer(
+    ppo_trainer = CustomPPOTrainer( #根据提供的参数来设置PPO训练。
         model_args=model_args,
         training_args=training_args,
         finetuning_args=finetuning_args,
@@ -96,7 +96,7 @@ def run_ppo(
         lr_scheduler=lr_scheduler,
     )
 
-    # Training
+    # Training 开始PPO训练
     if training_args.do_train:
         ppo_trainer.ppo_train(resume_from_checkpoint=training_args.resume_from_checkpoint)
         ppo_trainer.save_model()

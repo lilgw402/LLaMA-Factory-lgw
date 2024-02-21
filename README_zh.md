@@ -512,7 +512,7 @@ python src/export_model.py \
 > [!TIP]
 > 合并 LoRA 权重之后可再次使用 `--export_quantization_bit 4` 和 `--export_quantization_dataset data/c4_demo.json` 量化模型。
 
-### API 服务
+### API 服务（启动一个api，可以通过接口调用训练好的模型）
 
 ```bash
 python src/api_demo.py \
